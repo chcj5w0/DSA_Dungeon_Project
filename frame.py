@@ -13,9 +13,10 @@ class Frame():
         if len(Frame.frame) > 30:
             Frame.frame.pop(0)
     
-    def undo(self):
-        if len(Frame.frame) > 1:
-            Frame.frame.pop()
+    @classmethod
+    def undo(cls):
+        if len(cls.frame) > 1:
+            cls.frame.pop()
     
         
 
