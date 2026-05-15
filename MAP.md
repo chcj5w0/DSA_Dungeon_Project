@@ -70,12 +70,17 @@ map.in_bounds(x, y)  # → bool
 map.is_walkable(x, y)  # → grid[y][x] == 0
 ```
 
-## TODO
+## 구현 현황
 
-- [ ] `Map.__init__` — 그리드 초기화 + 생성 호출
-- [ ] `Map._place_rooms` — 방 배치 (AABB 충돌 검사)
-- [ ] `Map._connect_rooms` — 순차 L자 복도 연결
-- [ ] `Map._place_start_end` — 거리 최대화된 시작/도착 방 선정
-- [ ] `Map._spawn_entities` — 몬스터·아이템 배치
-- [ ] `Map.in_bounds` / `Map.is_walkable` — 유틸
-- [ ] `render()` 연동 — 타일별 색상 또는 스프라이트
+- [x] `Map.__init__` — 그리드 초기화 + 생성 호출
+- [x] `Map._place_rooms` — 방 배치 (AABB 충돌 검사, 2타일 여백)
+- [x] `Map._connect_rooms` — 순차 L자 복도 연결
+- [x] `Map._place_start_end` — 모든 방 쌍 중 맨해튼 거리 최대 쌍 선택, `MIN_DIST` 미달 시 재생성
+- [ ] `Map._spawn_entities` — **빈 구현**. `Enemy` / `Item` 클래스 완성 후 채울 것
+- [x] `Map.in_bounds` / `Map.is_walkable` / `get_tile` / `set_tile` — 유틸
+- [x] `render()` 연동 — `main.py`의 `render()`에서 floor/wall 스프라이트 + 기타 타일 색상 fallback
+
+## 미연결 항목
+
+- `TILE_END(4)` 진입 시 다음 층으로의 전환 로직이 게임 루프에 없음 (`main.py` 쪽 TODO)
+- 시작/도착 외 나머지 방의 몬스터·아이템 배치는 `Enemy`/`Item` 클래스 후속 작업

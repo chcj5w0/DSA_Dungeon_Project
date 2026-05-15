@@ -46,28 +46,41 @@ Python으로 구현한 던전 크롤러 RPG 게임. GIST 자료구조및알고�
 | 파일 | 상태 | 비고 |
 |------|------|------|
 | `frame.py` | 완료 | Stack 기반 Undo (최대 30회) |
-| `player.py` | 부분 완료 | 기본 이동만 구현, HP/ATK/DEF·전투·인벤토리 미구현 |
-| `main.py` | 부분 완료 | 게임 루프·키 입력 완료, render() 미구현 |
-| `map.py` | 미구현 | 빈 클래스만 존재 |
-| `enemy.py` | 미구현 | 클래스 없음 |
-| Leaderboard | 미구현 | - |
+| `map.py` | 완료 | 절차적 생성 (방 배치 + L자 복도 + 시작/도착 거리 보장). `_spawn_entities`는 빈 구현 |
+| `main.py` | 완료 | 게임 루프, 키 입력, 카메라 추적 렌더링. 적 AI 호출 / 아이템 획득 자리는 TODO |
+| `player.py` | 부분 완료 | 이동·근접 공격 구현. HP 사망 처리·XP/레벨·원거리(F)·포제션(V/A)·인벤토리 미구현 |
+| `enemy.py` | 미구현 | 빈 파일 — `Enemy` 클래스 없음 |
+| Item / Inventory | 미구현 | 클래스 없음, `I`키 핸들러 자리만 존재 |
+| 층 이동 (stair) | 미구현 | `TILE_END` 진입 시 다음 층 전환 처리 없음 |
+| HUD | 미구현 | HP바·Undo바·점수·인벤토리 표시 없음 |
+| Leaderboard | 미구현 | 점수 계산, 저장/로드, 게임오버 화면 없음 |
 
 ## 다음 작업 (우선순위 순)
 
-1. **`Map` 구현** — 방 생성 + 복도 연결 (나머지 전부 여기에 의존)
-2. **`render()`** — 맵 기반 화면 렌더링
-3. **`Player` 완성** — HP/ATK/DEF, 전투, 인벤토리
-4. **`Enemy` 클래스** — 스폰, 추적 AI
-5. **리더보드** — 점수 계산, 저장/로드
+1. **`Enemy` 클래스 + `Map._spawn_entities`** — 적이 화면에 등장. 추적 AI(BFS 등)는 DS&A 점수에도 직결
+2. **`Item` 클래스 + `Player.inventory` + 인벤토리 UI** — DS&A 7요소 중 하나
+3. **HUD** — HP/Undo 바, 층/점수 텍스트
+4. **층 이동** — `TILE_END` 위에서 다음 층(`Map(floor+1)`)으로 전환
+5. **Player 완성** — 사망 처리, XP/레벨, 원거리(F), 포제션(V/A)
+6. **리더보드** — 점수 계산식 적용, JSON 저장/로드, 게임오버/리더보드 화면
+
+## 알려진 이슈
+
+- `main.py`의 턴마다 `copy.deepcopy(frame)` 호출 — 맵까지 전체 복사돼 큰 맵에서 비용이 큼. Map을 immutable로 분리하거나 Undo 대상 상태만 복사하는 식으로 최적화 여지 있음.
 
 ## 파일 구조
 
 ```
 DSA/
 ├── main.py       # 게임 루프, 렌더링, 입력 처리
-├── map.py        # 던전 맵 생성 및 구조
-├── player.py     # 플레이어 상태, 전투, 인벤토리
+├── map.py        # 던전 맵 생성 및 구조 (Map, Room)
+├── player.py     # 플레이어 상태, 이동, 공격
+├── enemy.py      # (미구현) Enemy 클래스
 ├── frame.py      # Undo용 Stack 프레임
+├── render.py     # (미사용) 렌더링은 현재 main.py 내부에 있음
+├── assets/       # 스프라이트 이미지 (Player, Enemy, Tiles)
+├── map/          # 맵 관련 리소스
+├── MAP.md        # 던전 맵 설계 문서
 └── DSA Project.pdf  # 프로젝트 발표 슬라이드
 ```
 
