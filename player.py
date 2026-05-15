@@ -7,7 +7,12 @@ class Player():
         self.health = self.max_health
         self.attack_power = 10
         self.defense = 5
-
+        self.lvl = 1
+        self.exp = 0
+        self.exp_to_next_lvl = 100
+        self.inventory = []
+        self.inventory_size = 10
+        
     def move(self, game_map, direction):
         if direction == 'up':
             if game_map.is_walkable(self.x, self.y - 1):
