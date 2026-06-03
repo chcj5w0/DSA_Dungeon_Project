@@ -7,9 +7,6 @@ from frame import Frame
 
 KEYS = [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d, pygame.K_u, pygame.BUTTON_LEFT, pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4, pygame.K_5, pygame.K_6, pygame.K_7, pygame.K_8, pygame.K_9, pygame.K_0]
 
-# [DEBUG] 테스트용 키 — 정식 빌드 시 제거
-DEBUG_KEYS = [pygame.K_b, pygame.K_t]
-
 ## KEY FEATURES:
 ## TURN-BASED
 ## UNDOS
@@ -18,46 +15,10 @@ DEBUG_KEYS = [pygame.K_b, pygame.K_t]
 ## SIMPLE COMBAT SYSTEM
 ## INVENTORY SYSTEM
 
-# [DEBUG] ---------------------------------------------
-def _debug_dump(frame):
-    p = frame["player"]
-    enemies = frame["enemies"]
-    print(f"[DEBUG] floor={frame['map'].floor} "
-          f"player=({p.x},{p.y}) hp={p.health}/{p.max_health} "
-          f"atk={p.get_attack_power()} def={p.defense} "
-          f"lvl={p.lvl} exp={p.exp}/{p.exp_to_next_lvl}")
-    print(f"[DEBUG] enemies({len(enemies)}):")
-    for i, e in enumerate(enemies):
-        tiles = e.occupied_tiles()
-        print(f"  [{i}] {e.NAME:6} pos=({e.x},{e.y}) size={e.SIZE} "
-              f"hp={e.health}/{e.MAX_HEALTH} alive={e.is_alive()} "
-              f"tiles={tiles}")
-
-def _debug_teleport_boss(player, enemies, game_map):
-    from enemy import BossEnemy
-    boss = next((e for e in enemies if isinstance(e, BossEnemy)), None)
-    if boss is None:
-        print("[DEBUG] 보스 없음 — floor>=BOSS_FLOOR인지 확인")
-        return
-    # 플레이어 우측에 2×2 들어갈 자리 찾기
-    for dx, dy in ((2, 0), (-3, 0), (0, 2), (0, -3), (2, -1), (-3, -1)):
-        tlx, tly = player.x + dx, player.y + dy
-        if not boss._blocked(tlx, tly, game_map, enemies, player):
-            boss.x, boss.y = tlx, tly
-            print(f"[DEBUG] 보스 텔레포트 → ({tlx},{tly})")
-            return
-    print("[DEBUG] 보스 텔레포트 실패 — 주변에 2×2 자리 없음")
-# ----------------------------------------------------
-
 def turn_update(key, frame):
     # --- UNDO 기능 ---
     if key == pygame.K_u:
         Frame.undo()
-        return
-
-    # [DEBUG] 적 상태 덤프 — 턴 소비 없음
-    if key == pygame.K_b:
-        _debug_dump(frame)
         return
 
     new_frame = copy.deepcopy(frame)
@@ -66,11 +27,6 @@ def turn_update(key, frame):
     enemies = new_frame["enemies"]
     items = new_frame["items"]
 
-    # [DEBUG] 보스를 플레이어 우측에 텔레포트
-    if key == pygame.K_t:
-        _debug_teleport_boss(player, enemies, map)
-        Frame(new_frame)
-        return
 
     # 행동 전 적 스냅샷 (kill_xp 누적용)
     pre_enemies = {id(e): e.exp_reward for e in enemies if e.is_alive()}
@@ -165,7 +121,6 @@ def main():
     load_images()
     load_fonts()
 
-    # [DEBUG] 보스 테스트용 — 마지막 층부터 시작. 정식 빌드 시 floor=1로 되돌릴 것
     _map = map.Map(floor=1)
     _player = player.Player(*_map.start)
 
@@ -185,7 +140,7 @@ def main():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     running = False
-                elif event.key in KEYS or event.key in DEBUG_KEYS:
+                elif event.key in KEYS:
                     turn_update(event.key, curr_frame)
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == pygame.BUTTON_LEFT:
                 turn_update(event.button, curr_frame)
