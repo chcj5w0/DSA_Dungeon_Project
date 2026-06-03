@@ -7,29 +7,29 @@ def generate_random_item():
         names = ['Stick', 'Crude Iron Sword', 'Sharp Iron Sword', 'Mystic Dagger']
         randval = random.random()
         if randval < 0.4:
-            name='Stick'
+            name=names[0]
             attack_bonus = random.randint(1, 4)
         elif randval < 0.7:
-            name='Crude Iron Sword'
+            name=names[1]
             attack_bonus = random.randint(5, 8)
         elif randval < 0.9:
-            name='Sharp Iron Sword'
+            name=names[2]
             attack_bonus = random.randint(9, 12)
         else:
-            name='Mystic Dagger'
-            attack_bonus = random.randint(13, 16)
+            name=names[3]
+            attack_bonus = random.randint(13, 20)
         return Weapon(name, attack_bonus)
     else:  # potion
         names = ['Small Health Potion', 'Large Healing Potion', 'Master Healing Elixir']
         randval = random.random()
         if randval < 0.5:
-            name='Small Health Potion'
+            name=names[0]
             effect_amount = random.randint(10, 19)
         elif randval < 0.8:
-            name='Large Healing Potion'
+            name=names[1]
             effect_amount = random.randint(20, 49)
         else:
-            name='Master Healing Elixir'
+            name=names[2]
             effect_amount = random.randint(50, 100)
         return Potion(name, effect_amount)
 

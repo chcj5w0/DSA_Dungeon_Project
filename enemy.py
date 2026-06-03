@@ -1,5 +1,6 @@
 import random
 from collections import deque
+import balance
 
 
 def _bresenham(x0, y0, x1, y1):
@@ -29,20 +30,21 @@ def _pythagorean_dist(x0, y0, x1, y1):
 class Enemy():
 
     NAME = "enemy"
-    MAX_HEALTH = 20
-    ATTACK = 5
-    XP = 20
-    SIGHT = 6
+    MAX_HEALTH = balance.ENEMY_STATS["Enemy"]["hp"]
+    ATTACK = balance.ENEMY_STATS["Enemy"]["atk"]
+    XP = balance.ENEMY_STATS["Enemy"]["xp"]
+    SIGHT = balance.ENEMY_STATS["Enemy"]["sight"]
     SPRITE_KEY = "enemy"
-    DROP_RATE = 0.30
+    DROP_RATE = balance.ENEMY_STATS["Enemy"]["drop"]
     SIZE = 1  # n×n 타일 점유. 좌상단이 (x, y)
 
     def __init__(self, x, y, lvl=1, exp_reward=None):
         self.x = x
         self.y = y
-        self.health = int(self.MAX_HEALTH*(0.5+lvl*0.5))
-        self.attack_power = int(self.ATTACK*(0.5+lvl*0.5))
-        self.exp_reward = self.XP*lvl if exp_reward is None else exp_reward
+        self.health = balance.scaled_stat(self.MAX_HEALTH, lvl)
+        self.attack_power = balance.scaled_stat(self.ATTACK, lvl)
+        self.exp_reward = (self.XP * lvl * balance.ENEMY_XP_PER_LVL
+                           if exp_reward is None else exp_reward)
 
     # --- 점유 영역 ---
 
@@ -171,7 +173,7 @@ class Enemy():
         return False
 
     def attack(self, player):
-        dmg = max(1, self.attack_power - player.defense)
+        dmg = balance.damage(self.attack_power, player.defense)
         player.take_damage(dmg)
 
     # --- 턴 인터페이스 ---
@@ -186,19 +188,19 @@ class Enemy():
 
 class MeleeEnemy(Enemy):
     NAME = "melee"
-    MAX_HEALTH = 20
-    ATTACK = 6
-    XP = 10
-    SIGHT = 6
+    MAX_HEALTH = balance.ENEMY_STATS["Melee"]["hp"]
+    ATTACK = balance.ENEMY_STATS["Melee"]["atk"]
+    XP = balance.ENEMY_STATS["Melee"]["xp"]
+    SIGHT = balance.ENEMY_STATS["Melee"]["sight"]
     SPRITE_KEY = "enemy_melee"
-    DROP_RATE = 0.3
+    DROP_RATE = balance.ENEMY_STATS["Melee"]["drop"]
 
     def update(self, player, game_map, enemies):
         if self.can_see(player, game_map):
             if self._adjacent_to(player):
                 self.attack(player)
             else:
-                if self.health < self.MAX_HEALTH // 5:
+                if self.health < self.MAX_HEALTH // balance.RETREAT_HP_DIVISOR:
                     self._step_away((player.x, player.y), game_map, enemies, player)
                 else:
                     self._step_toward((player.x, player.y), game_map, enemies, player)
@@ -208,14 +210,14 @@ class MeleeEnemy(Enemy):
 
 class RangedEnemy(Enemy):
     NAME = "ranged"
-    MAX_HEALTH = 12
-    ATTACK = 5
-    XP = 15
-    SIGHT = 8
-    MIN_DIST = 2
-    MAX_DIST = 4
+    MAX_HEALTH = balance.ENEMY_STATS["Ranged"]["hp"]
+    ATTACK = balance.ENEMY_STATS["Ranged"]["atk"]
+    XP = balance.ENEMY_STATS["Ranged"]["xp"]
+    SIGHT = balance.ENEMY_STATS["Ranged"]["sight"]
+    MIN_DIST = balance.ENEMY_STATS["Ranged"]["min_dist"]
+    MAX_DIST = balance.ENEMY_STATS["Ranged"]["max_dist"]
     SPRITE_KEY = "enemy_ranged"
-    DROP_RATE = 0.3
+    DROP_RATE = balance.ENEMY_STATS["Ranged"]["drop"]
 
     def update(self, player, game_map, enemies):
         if self.can_see(player, game_map):
@@ -232,13 +234,13 @@ class RangedEnemy(Enemy):
 
 class FastEnemy(Enemy):
     NAME = "fast"
-    MAX_HEALTH = 10
-    ATTACK = 4
-    XP = 12
-    SIGHT = 7
-    STEPS_PER_TURN = 2
+    MAX_HEALTH = balance.ENEMY_STATS["Fast"]["hp"]
+    ATTACK = balance.ENEMY_STATS["Fast"]["atk"]
+    XP = balance.ENEMY_STATS["Fast"]["xp"]
+    SIGHT = balance.ENEMY_STATS["Fast"]["sight"]
+    STEPS_PER_TURN = balance.ENEMY_STATS["Fast"]["steps_per_turn"]
     SPRITE_KEY = "enemy_fast"
-    DROP_RATE = 0.3
+    DROP_RATE = balance.ENEMY_STATS["Fast"]["drop"]
 
     def update(self, player, game_map, enemies):
         for _ in range(self.STEPS_PER_TURN):
@@ -253,13 +255,13 @@ class FastEnemy(Enemy):
 
 class BossEnemy(Enemy):
     NAME = "boss"
-    MAX_HEALTH = 80
-    ATTACK = 14
-    XP = 100
-    SIGHT = 999  # 시야 무관 추적
-    SIZE = 2
+    MAX_HEALTH = balance.ENEMY_STATS["Boss"]["hp"]
+    ATTACK = balance.ENEMY_STATS["Boss"]["atk"]
+    XP = balance.ENEMY_STATS["Boss"]["xp"]
+    SIGHT = balance.ENEMY_STATS["Boss"]["sight"]  # 시야 무관 추적
+    SIZE = balance.ENEMY_STATS["Boss"]["size"]
     SPRITE_KEY = "enemy_boss"
-    DROP_RATE = 1.0
+    DROP_RATE = balance.ENEMY_STATS["Boss"]["drop"]
 
     def can_see(self, player, game_map):
         return True

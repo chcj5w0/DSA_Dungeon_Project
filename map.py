@@ -1,7 +1,8 @@
 import random
+import balance
 from enemy import MeleeEnemy, RangedEnemy, FastEnemy, BossEnemy
 
-BOSS_FLOOR = 5  # 이 층(이상)에서 보스 스폰
+BOSS_FLOOR = balance.BOSS_FLOOR  # 이 층(이상)에서 보스 스폰 (단일 출처: balance.py)
 
 # 타일 값
 TILE_FLOOR = 0
@@ -127,7 +128,7 @@ class Map:
     MAP_H = 50
     ROOM_MIN = 4
     ROOM_MAX = 10
-    ROOM_COUNT = 12
+    ROOM_COUNT = balance.ROOM_COUNT
     MIN_DIST = 30  # 시작/도착 방 최소 맨해튼 거리
     
     def __init__(self, floor=1):
@@ -159,6 +160,9 @@ class Map:
     
     def is_end(self, x, y):
         return self.get_tile(x, y)==TILE_END
+
+    def is_boss_floor(self):
+        return self.floor >= BOSS_FLOOR
     
     # --- 디버그용 맵 출력 ---
     def print_map(self):
@@ -300,10 +304,12 @@ class Map:
             self._carve_corridor(anchors[i], anchors[j])
             connected.add(j)
         # 가끔 추가 루프 1~2개 — 막다른 길 줄이고 다양성 ↑
-        extra = random.randint(1, 2)
-        for _ in range(extra):
-            i, j = random.sample(range(len(self.rooms)), 2)
-            self._carve_corridor(anchors[i], anchors[j])
+        # 방이 2개 미만이면 잇는 게 불가능하므로 건너뛴다(ROOM_COUNT가 작을 때 방어).
+        if len(self.rooms) >= 2:
+            extra = random.randint(1, 2)
+            for _ in range(extra):
+                i, j = random.sample(range(len(self.rooms)), 2)
+                self._carve_corridor(anchors[i], anchors[j])
 
     def _carve_corridor(self, a, b):
         # Drunken walk: 70% 확률로 목표 방향, 30%는 옆길 일탈.
@@ -392,7 +398,7 @@ class Map:
             if room is self._start_room or room is self._end_room:
                 continue
 
-            count = random.randint(2, 5)
+            count = random.randint(balance.SPAWN_PER_ROOM_MIN, balance.SPAWN_PER_ROOM_MAX)
             occupied = set()
             for _ in range(count):
                 if len(occupied) >= room.w * room.h:
@@ -426,9 +432,10 @@ class Map:
         enemies.append(BossEnemy(bx, by))
 
     def load_next_floor(self):
+        # 보스 층의 출구는 player.move에서 승리로 처리되므로 여기 도달하지 않는다.
+        # (방어적으로) 보스 층 이상은 더 생성하지 않는다.
         if self.floor >= BOSS_FLOOR:
-            #TODO: 클리어 처리
-            pass
+            return
         self.floor += 1
         self._generate()
 

@@ -2,24 +2,27 @@ import random
 import frame
 import item
 import render
+import balance
 
 class Player():
-    
+
     def __init__(self, x=0, y=0):
         self.x = x
         self.y = y
-        self.max_health = 100
+        self.max_health = balance.PLAYER_BASE_HP
         self.health = self.max_health
-        self.base_attack_power = 10
-        self.defense = 5
+        self.base_attack_power = balance.PLAYER_BASE_ATK
+        self.defense = balance.PLAYER_BASE_DEF
         self.lvl = 1
         self.exp = 0
-        self.exp_to_next_lvl = 100
+        self.exp_to_next_lvl = balance.EXP_BASE
         self.inventory = []
-        self.inventory_size = 10
+        self.inventory_size = balance.PLAYER_INVENTORY
         self.equipped_weapon = None
         self.alive = True
         self.items=[]
+        self.boss_defeated = False  # 보스를 처치하면 True (승리 조건의 전제)
+        self.won = False            # 보스 처치 후 출구 도달 시 True
     
     def _blocked(self, x, y, game_map, enemies):
         if not game_map.is_walkable(x, y):
@@ -46,8 +49,14 @@ class Player():
             if not self._blocked(self.x + 1, self.y, game_map, enemies):
                 self.x += 1
         if game_map.is_end(self.x, self.y):
-            game_map.load_next_floor()
-            self.x, self.y = game_map.start
+            if game_map.is_boss_floor():
+                # 보스 층의 출구: 보스를 처치했을 때만 통과 = 승리.
+                # 아직 안 잡았으면 출구가 잠긴 셈 치고 다음 층으로 보내지 않는다.
+                if self.boss_defeated:
+                    self.won = True
+            else:
+                game_map.load_next_floor()
+                self.x, self.y = game_map.start
 
     def attack(self, game_enemies):
         adjacent_enemies = []
@@ -75,10 +84,10 @@ class Player():
     def lvl_up(self):
         self.lvl += 1
         self.exp = self.exp - self.exp_to_next_lvl
-        self.exp_to_next_lvl = int(self.exp_to_next_lvl * 1.1)
-        self.max_health += 10
-        self.base_attack_power += 2
-        self.defense += 1
+        self.exp_to_next_lvl = int(self.exp_to_next_lvl * balance.EXP_GROWTH)
+        self.max_health += balance.LVLUP_HP
+        self.base_attack_power += balance.LVLUP_ATK
+        self.defense += balance.LVLUP_DEF
         
     def get_attack_power(self):
         if self.equipped_weapon:
@@ -106,4 +115,6 @@ class Player():
         return self.alive and self.health > 0
 
     def die(self):
-        pass
+        # 사망 시점 훅. 패배 판정 자체는 main.turn_update가 is_alive()로 처리하므로
+        # 여기서는 사망 순간 한정 효과(드롭, 사운드 등)만 둔다. 현재는 상태만 확정.
+        self.alive = False
