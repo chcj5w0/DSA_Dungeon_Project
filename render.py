@@ -240,7 +240,11 @@ def draw_game_over(screen, won, score, name, leaderboard_top, name_done):
 
 
 def render(screen, frame, elapsed_sec=0):
-    load_images()
+    # 이미지는 한 번만 로드한다. 매 프레임 load_images()를 부르면 디스크에서
+    # PNG를 다시 읽고 scale까지 해서(초당 수백 회) 큰 병목이 된다.
+    # main()이 시작 시 한 번 채우지만, 미채움 상태로 호출돼도 안전하게 1회 로드.
+    if not IMAGES:
+        load_images()
     screen.fill((0, 0, 0))
 
     _map    = frame["map"]

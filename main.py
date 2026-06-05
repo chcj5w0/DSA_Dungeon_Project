@@ -2,6 +2,7 @@ import pygame
 import player
 import map
 import copy
+import balance
 from render import render, load_images, load_fonts, draw_game_over, compute_score
 from frame import Frame
 from enemy import BossEnemy
@@ -64,8 +65,15 @@ def turn_update(key, frame):
         enemies.extend(map.monsters)
 
     # --- 적 AI 행동 (플레이어 이동 후) ---
+    # 성능: 플레이어와 맨해튼 거리가 AI_ACTIVE_RADIUS 이내인 적만 update.
+    # 멀리 있는 적은 시야 밖이라 행동이 안 보이므로 BFS 비용을 아낀다.
+    # 보스는 멀리서도 추적하는 설계라 거리와 무관하게 항상 작동.
+    radius = balance.AI_ACTIVE_RADIUS
     for enemy in enemies:
-        if enemy.is_alive():
+        if not enemy.is_alive():
+            continue
+        if isinstance(enemy, BossEnemy) or \
+                abs(enemy.x - player.x) + abs(enemy.y - player.y) <= radius:
             enemy.update(player, map, enemies)
 
 

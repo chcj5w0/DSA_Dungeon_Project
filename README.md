@@ -1,93 +1,87 @@
 # Dungeon Crawler RPG — DS&A Team Project
 
-Python으로 구현한 던전 크롤러 RPG 게임. GIST 자료구조및알고리즘 수업 팀 프로젝트.
+Python + pygame으로 구현한 던전 크롤러 RPG 게임. GIST 자료구조및알고리즘 수업 팀 프로젝트.
 
-## 주요 기능 (DS&A 7가지 요소)
+절차적으로 생성되는 던전을 탐험하며 적을 처치하고, 5층의 보스를 잡아 탈출하는 턴 기반 로그라이크입니다. 수업에서 요구하는 **6가지 핵심 자료구조/알고리즘 요소**를 게임 메커닉에 녹여 구현했습니다.
 
-| 기능 | 설명 |
-|------|------|
-| **1. Dungeon Map** | 절차적으로 생성된 던전 맵 (방 + 복도 연결) |
-| **2. Undo System** | 플레이어 행동 되돌리기 (U키, 최대 30회) |
-| **3. Turn Management** | 턴 기반 전투 및 적 행동 관리 |
-| **4. Item Inventories** | 아이템 수집 및 인벤토리 관리 (I키) |
-| **5. Enemy AI** | 플레이어 감지 및 추적 AI |
-| **6. Leaderboard** | 점수 기록 및 순위표 |
+## 핵심 기능 (DS&A 6요소)
+
+| # | 기능 | 자료구조 / 알고리즘 | 위치 |
+|---|------|--------------------|------|
+| 1 | **Dungeon Map** | 2D 그리드 `list[list[int]]`, 절차적 방 배치 + L자 복도, 시작/도착 거리 보장 | [map.py](map.py) |
+| 2 | **Undo System** | Stack(LIFO), 최대 30프레임. 맵은 한 층 동안 불변이라 프레임 간 공유해 복사 비용 절감 | [frame.py](frame.py), [main.py](main.py) |
+| 3 | **Turn Management** | 플레이어 행동 → 적 AI 순회 → 아이템 픽업 순서의 턴 처리 | [main.py](main.py) |
+| 4 | **Item Inventory** | List(슬롯 10칸), 숫자키로 사용 (포션 회복 / 무기 장착) | [player.py](player.py), [item.py](item.py) |
+| 5 | **Enemy AI** | BFS 추적 + Bresenham 시야 판정, 일반 4종 + 보스(2×2) | [enemy.py](enemy.py) |
+| 6 | **Leaderboard** | 이름→최고점 `dict`, `sorted` 내림차순 정렬, JSON 영속화 | [leaderboard.py](leaderboard.py) |
+
+## 게임 흐름
+
+- **승리**: 보스층(5층)에서 보스를 처치하면 출구가 열리고, 출구에 도달하면 클리어. (보스 미처치 시 출구 잠김)
+- **패배**: 적 AI 턴 이후 플레이어 HP가 0이 되면 사망. Undo로 되살아날 수 없도록 차단됨.
+- **결과 화면**: 이름 입력 → 리더보드 저장 → TOP10 표시 → `R` 재시작 / `ESC`·`Q` 종료.
 
 ## 점수 계산식
 
+`render.compute_score`가 계산하며, 상수는 [balance.py](balance.py)에 정의됩니다.
+
 ```
-점수 = 킬XP×10 + 골드아이템×500 + Undo잔여×90 + max(0, 3000 - 경과초)×10
+점수 = max(0, killXP×100 + gold×500 − Undo횟수×10 − 경과초×10)
 ```
+
+| 항목 | 상수 | 값 |
+|------|------|---:|
+| 처치 XP 1당 | `SCORE_PER_XP` | +100 |
+| 골드 1당 | `SCORE_PER_GOLD` | +500 |
+| Undo 1회당 | `SCORE_UNDO_PENALTY` | −10 |
+| 경과 1초당 | `SCORE_TIME_PENALTY` | −10 |
 
 ## 조작법
 
-| 키 | 동작 |
-|----|------|
-| `WASD` | 이동 |
-| `Space` | NPC 근접공격 / 밀기 |
-| `F` | 원거리 공격 |
-| `U` | Undo (이전 상태로 되돌리기) |
-| `V` / `A` | 포제션 |
-| `I` | 인벤토리 열기 |
-| `R` | 새 게임 (리더보드 화면에서) |
-| `ESC` | 종료 |
+| 입력 | 동작 |
+|------|------|
+| `W` `A` `S` `D` | 이동 |
+| 마우스 좌클릭 | 근접 공격 |
+| `U` | Undo (이전 상태로 되돌리기, 최대 30회) |
+| `1` ~ `9`, `0` | 인벤토리 슬롯 1~10번 아이템 사용 |
+| `R` | 새 게임 (결과 화면에서) |
+| `ESC` / `Q` | 종료 |
 
 ## HUD 정보
 
-- 층 / 시간 / 레벨 / XP
-- HP 바 (빨강)
+- 층 / 경과 시간 / 레벨 / XP
+- HP 바 (빨강), Undo 잔여 횟수 바 (초록)
 - ATK / DEF / 화살 수
-- Undo 잔여 횟수 바 (초록)
-- 현재 점수 / 예상 점수
+- 현재 점수
 - 인벤토리 목록
 
-## 구현 현황
+## 성능 최적화
 
-| 파일 | 상태 | 비고 |
-|------|------|------|
-| `frame.py` | 완료 | Stack 기반 Undo (최대 30회) |
-| `map.py` | 완료 | 절차적 생성 (방 배치 + L자 복도 + 시작/도착 거리 보장). `_spawn_entities`는 빈 구현 |
-| `main.py` | 완료 | 게임 루프, 키 입력, 카메라 추적 렌더링. 적 AI 호출 / 아이템 획득 자리는 TODO |
-| `player.py` | 부분 완료 | 이동·근접 공격 구현. HP 사망 처리·XP/레벨·원거리(F)·포제션(V/A)·인벤토리 미구현 |
-| `enemy.py` | 미구현 | 빈 파일 — `Enemy` 클래스 없음 |
-| Item / Inventory | 미구현 | 클래스 없음, `I`키 핸들러 자리만 존재 |
-| 층 이동 (stair) | 미구현 | `TILE_END` 진입 시 다음 층 전환 처리 없음 |
-| HUD | 미구현 | HP바·Undo바·점수·인벤토리 표시 없음 |
-| Leaderboard | 미구현 | 점수 계산, 저장/로드, 게임오버 화면 없음 |
-
-## 다음 작업 (우선순위 순)
-
-1. **`Enemy` 클래스 + `Map._spawn_entities`** — 적이 화면에 등장. 추적 AI(BFS 등)는 DS&A 점수에도 직결
-2. **`Item` 클래스 + `Player.inventory` + 인벤토리 UI** — DS&A 7요소 중 하나
-3. **HUD** — HP/Undo 바, 층/점수 텍스트
-4. **층 이동** — `TILE_END` 위에서 다음 층(`Map(floor+1)`)으로 전환
-5. **Player 완성** — 사망 처리, XP/레벨, 원거리(F), 포제션(V/A)
-6. **리더보드** — 점수 계산식 적용, JSON 저장/로드, 게임오버/리더보드 화면
-
-## 알려진 이슈
-
-- `main.py`의 턴마다 `copy.deepcopy(frame)` 호출 — 맵까지 전체 복사돼 큰 맵에서 비용이 큼. Map을 immutable로 분리하거나 Undo 대상 상태만 복사하는 식으로 최적화 여지 있음.
+- **Undo 맵 공유**: 맵은 한 층 동안 변하지 않으므로 `deepcopy` 대상에서 제외하고 모든 프레임이 동일 맵을 공유. 층 전환 시 `Frame.reset_history()`로 Undo 스택을 리셋.
+- **적 AI 거리 게이팅**: 플레이어와 맨해튼 거리가 `AI_ACTIVE_RADIUS`(=12) 이내인 적만 매 턴 `update()`를 돌려 BFS 비용을 줄임. 보스는 멀리서도 추적하는 설계라 게이팅에서 제외.
+- **이미지 1회 로드**: `render()`가 매 프레임 `load_images()`를 호출하던 병목을 제거하고, 이미지 캐시(`IMAGES`)가 비었을 때만 1회 로드.
 
 ## 파일 구조
 
 ```
 DSA/
-├── main.py       # 게임 루프, 렌더링, 입력 처리
-├── map.py        # 던전 맵 생성 및 구조 (Map, Room)
-├── player.py     # 플레이어 상태, 이동, 공격
-├── enemy.py      # (미구현) Enemy 클래스
-├── frame.py      # Undo용 Stack 프레임
-├── render.py     # (미사용) 렌더링은 현재 main.py 내부에 있음
-├── assets/       # 스프라이트 이미지 (Player, Enemy, Tiles)
-├── map/          # 맵 관련 리소스
-├── MAP.md        # 던전 맵 설계 문서
+├── main.py          # 게임 루프, 입력 처리, 턴 진행, 카메라, 게임오버 화면
+├── map.py           # 던전 맵 생성 (방 배치 + L자 복도 + 스폰)
+├── player.py        # 플레이어 상태·이동·공격·인벤토리·층 이동
+├── enemy.py         # Enemy 부모 + Melee/Ranged/Fast/Boss(2×2) AI
+├── item.py          # Weapon / Potion 랜덤 생성
+├── frame.py         # Undo용 Stack 프레임
+├── render.py        # 맵·적·플레이어 렌더링 + HUD + 점수 계산
+├── leaderboard.py   # 점수 저장/로드 (JSON), 정렬
+├── balance.py       # 게임 밸런스 상수 (스탯·스폰·점수·성능)
+├── assets/          # 스프라이트 이미지 (Player, Enemy, Tiles)
+├── MAP.md           # 던전 맵 설계 문서
 └── DSA Project.pdf  # 프로젝트 발표 슬라이드
 ```
 
 ## 실행
 
 ```bash
+pip install pygame
 python main.py
 ```
-
-> pygame 라이브러리 필요: `pip install pygame`

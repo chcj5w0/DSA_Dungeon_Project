@@ -1,62 +1,64 @@
 # Dungeon Crawler RPG — 진행상황
 
-> 작성일: 2026-05-25
-> 마지막 커밋: `83f75eb` (test commit) — 이후 다수 변경 미커밋
+> 작성일: 2026-06-05
+> 마지막 커밋: `568ff45` (6/3 commit)
 
-## DS&A 7가지 요소 진행 현황
+## DS&A 6대 요소 진행 현황 — **전부 구현 완료**
 
-| # | 요소 | 자료구조/알고리즘 | 상태 | 위치 |
-|---|------|--------------------|------|------|
-| 1 | Dungeon Map | 절차적 생성, AABB 충돌, L자 복도 | ✅ 완료 | [map.py](map.py) |
-| 2 | Undo System | Stack (최대 30 프레임) | ✅ 완료 | [frame.py](frame.py) |
-| 3 | Turn Management | 키 입력 → 플레이어 → 적 AI → 아이템 픽업 | ✅ 완료 | [main.py:52-111](main.py#L52-L111) |
-| 4 | Item Inventories | List 인벤토리 (10칸), 1~0 키로 사용 | ✅ 동작 / UI 일부 | [player.py](player.py), [item.py](item.py) |
-| 5 | Enemy AI | BFS 추적 + Bresenham 시야 + 도주 | ✅ 완료 (4종) | [enemy.py](enemy.py) |
-| 6 | Leaderboard | 점수 계산 + JSON 저장/로드 | ⚠️ 점수 계산만, 저장/게임오버 화면 미구현 | [render.py:85-92](render.py#L85-L92) |
+| # | 요소 | 자료구조 / 알고리즘 | 상태 | 위치 |
+|---|------|--------------------|:----:|------|
+| 1 | Dungeon Map | 2D 그리드, 절차생성 + L자 복도 | ✅ | [map.py](map.py) |
+| 2 | Undo System | Stack(최대 30) + 맵 공유 최적화 | ✅ | [frame.py](frame.py), [main.py](main.py) |
+| 3 | Turn Management | 플레이어 → 적 AI → 아이템 픽업 | ✅ | [main.py](main.py) |
+| 4 | Item Inventory | List(10칸), 숫자키 사용 | ✅ | [player.py](player.py), [item.py](item.py) |
+| 5 | Enemy AI | BFS 추적 + Bresenham 시야, 4종 + 보스 | ✅ | [enemy.py](enemy.py) |
+| 6 | Leaderboard | dict + sorted + JSON 영속 | ✅ | [leaderboard.py](leaderboard.py) |
 
----
-
-## 파일별 상태
-
-| 파일 | LOC | 상태 | 비고 |
-|------|----:|------|------|
-| [frame.py](frame.py) | 24 | ✅ | Stack 기반 Undo, 30 프레임 제한 |
-| [map.py](map.py) | 215 | ✅ | 방 + L자 복도 + 시작/도착 거리 ≥30 보장, `_spawn_entities` / `_spawn_boss` 완성, `load_next_floor()` 구현 |
-| [player.py](player.py) | 108 | ✅ 거의 완료 | HP·ATK·XP·LV·인벤토리·`use_item`·`take_damage`·층 이동 트리거. `die()`는 빈 함수 |
-| [enemy.py](enemy.py) | 288 | ✅ | `Enemy` 부모 + Melee/Ranged/Fast/Boss(2×2) 4종 |
-| [item.py](item.py) | 58 | ✅ | `Weapon` / `Potion` 랜덤 생성 (`generate_random_item`) |
-| [main.py](main.py) | 191 | ✅ | 게임 루프, 키 입력, 카메라, 점수 누적, 아이템 자동 픽업 |
-| [render.py](render.py) | 224 | ✅ | 맵·적·플레이어 + HUD (HP/Undo/XP 바, 점수, 인벤토리) |
-| [enemy_boss.py](enemy_boss.py) | 18 | ⚠️ 중복 | `enemy.py`의 `BossEnemy`와 중복 — 삭제 필요 |
-| [animation.py](animation.py) | 6 | ⚠️ 스켈레톤 | `symtable` import만 있고 미사용 |
+> 게임오버/클리어 화면, 리더보드 저장·로드까지 모두 완성되어 6요소 전부 동작합니다.
 
 ---
 
-## 메모리 대비 새로 추가된 것 (지난 10일)
+## 최근 변경 (성능 최적화)
 
-- **`render.py` 완성** — 빈 파일 → 224줄. HUD (Floor/Time/Lv/XP/HP/ATK/DEF/Arrows/Undo/Score/Inventory) 전부 구현
-- **`player.use_item`** — 1~0 키로 인벤토리 슬롯 사용 (포션 회복 / 무기 장착)
-- **`main.py` 아이템 자동 픽업** — 플레이어 좌표와 동일한 아이템 인벤토리 추가
-- **점수 공식 적용** — `_compute_score()`가 README 공식대로 계산해서 HUD에 표시
-- **층 이동 동작** — `player.move` 안에서 `TILE_END` 진입 시 `Map.load_next_floor()` 호출
+- **Undo 맵 공유**: 맵은 한 층 동안 불변 → `deepcopy`에서 제외, 프레임 간 공유. 층 전환 시 `Frame.reset_history()`로 스택 리셋.
+- **적 AI 거리 게이팅** ([main.py](main.py)): 플레이어 맨해튼 거리 `AI_ACTIVE_RADIUS`(=12) 이내인 적만 매 턴 `update()`. 보스는 예외(항상 작동) → BFS 비용 절감.
+- **이미지 1회 로드** ([render.py](render.py)): 매 프레임 `load_images()` 호출 제거, `IMAGES`가 빌 때만 1회 로드.
 
 ---
 
-## 남은 작업 (우선순위)
+## 게임 종료 흐름
 
-1. **게임오버 / 클리어 화면** — `player.die()`가 빈 함수, 보스 처치 후 처리 없음
-2. **리더보드 저장** — 현재는 화면 표시만, JSON 저장/로드 + 리더보드 화면 필요
-3. **인벤토리 UI (I키)** — HUD 사이드바에 목록은 보이지만 별도 인벤토리 화면(I키) 미구현
-4. **원거리(F) / 포제션(V/A)** — `KEYS`에 없음, README에는 기재됨
-5. **코드 정리**
-   - `enemy_boss.py` 삭제 (`enemy.BossEnemy`와 중복)
-   - `animation.py`에서 `import symtable` 제거 또는 파일 자체 삭제
-   - `main.py`의 `[DEBUG]` 코드 (`K_b`, `K_t`, `floor=5` 시작) 정식 빌드 전 제거
-   - `main.py`에 남아 있는 사용되지 않는 `TILE_COLORS` / `load_images` 중복 (render.py에 동일 정의)
+- **패배**: 적 AI 후 `player.is_alive()` False → 프레임 `status="dead"`, Undo로 부활 차단.
+- **승리**: 보스 처치 시 `player.boss_defeated=True` → 보스층(5층) 출구 도달 시 클리어. 보스 미처치면 출구 잠김.
+- **결과 화면** (`main.game_over_screen`): 이름 입력 → 리더보드 저장 → TOP10 표시 → `R` 재시작 / `ESC`·`Q` 종료.
+
+---
+
+## 남은 작업
+
+1. **실제 창에서 종료 흐름 검증** — 이름 타이핑·결과 렌더·`R` 재시작은 시뮬레이션만 거침. 디스플레이 환경에서 `python3 main.py` 직접 플레이 필요.
+2. **코드 정리**
+   - `enemy_boss.py` 중복 (`enemy.BossEnemy`와 겹침) 확인 후 삭제
+   - `animation.py` 스켈레톤 정리
+   - `main.py`의 `[DEBUG]` 코드(floor=5 시작 등) 정식 빌드 전 제거
+3. **평가 대비** — 면접(25%) Q&A는 `GUIDANCE_QnA.md` 참고.
+
+---
+
+## 평가 배점 (Guidance 기준)
+
+| 항목 | 비중 |
+|------|---:|
+| PPT / 제출 | 30% |
+| 6기능 구현 | 15% |
+| 알고리즘 비교 | 10% |
+| **면접** | **25%** |
+| 데모 | 20% |
+
+> 키워드: "Run it / Defend it / Compare it"
 
 ---
 
 ## 알려진 이슈
 
-- 매 턴 `copy.deepcopy(frame)` 호출 — 맵까지 통째로 복사돼 큰 맵에서 비용 큼. Map immutable 분리 검토 여지
-- `render()` 안에서 매 프레임 `load_images()` 호출 — `main.load_images()`와 별개로 매번 디스크 로드. 시작 시 1회만 호출하도록 정리 필요
+- `gold`는 현재 항상 0 → 점수 공식의 골드 항목 미사용 상태.
