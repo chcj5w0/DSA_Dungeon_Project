@@ -201,7 +201,7 @@ class Enemy():
     # --- 공격 ---
 
     def _adjacent_to(self, player):
-        """점유 칸 중 하나라도 플레이어와 맨해튼 1이면 인접."""
+        # 점유 칸 중 하나라도 플레이어와 맨해튼 1이면 인접.
         for tx, ty in self.occupied_tiles():
             if abs(tx - player.x) + abs(ty - player.y) == 1:
                 return True
