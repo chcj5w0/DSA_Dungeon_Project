@@ -1,3 +1,15 @@
+"""던전 맵 생성 모듈.
+
+맵은 2차원 정수 그리드(`list[list[int]]`)이고, 정수 하나가 타일 한 칸이다.
+한 층은 다음 파이프라인으로 절차 생성된다(`Map._generate`).
+  1) 격자 초기화     - 전부 벽
+  2) 방 배치         - 4가지 모양(직사각·L·원·동굴). 동굴은 셀룰러 오토마타로 생성
+  3) 방 연결         - 가장 가까운 미연결 방부터 잇는 Prim 유사 방식(복도 총길이↓)
+  4) 시작·도착 배치  - 맨해튼 거리가 가장 먼 두 방(최소 거리 보장)
+  5) 노이즈 추가     - 돌조각·도착 힌트·벽 깎기(시각/길찾기 단서)
+  6) 적 스폰         - 방마다 적, 보스 층이면 도착 방에 보스
+좌표 접근은 grid[y][x] 한 번으로 O(1).
+"""
 import random
 import balance
 from enemy import MeleeEnemy, RangedEnemy, FastEnemy, BossEnemy
@@ -14,6 +26,9 @@ TILE_RUBBLE = 5  # 돌조각: 통행 가능, 시각적 장식용
 TILE_HINT = 6    # 도착점 근처 힌트 타일: 통행 가능
 
 class Room:
+    """방 하나. 4가지 모양을 지원한다(직사각형/L자/원형/동굴).
+    `contains_floor`가 모양을 고려해 '이 칸이 방의 실제 바닥인지'를 판정하고,
+    동굴형은 셀룰러 오토마타 마스크를 미리 만들어 둔다."""
 
     SHAPES = ('rect', 'l_shape', 'circle', 'cave')
 
@@ -62,7 +77,11 @@ class Room:
     # --- 동굴형 (cellular automata) ---
 
     def _generate_cave_mask(self):
-        """방 영역에 CA 규칙을 돌려 자연스러운 동굴 모양 마스크 생성."""
+        # 방 영역에 셀룰러 오토마타(CA)를 돌려 자연스러운 동굴 모양 마스크(True=바닥) 생성.
+        # ① 랜덤 노이즈로 시작 
+        # ② 8-이웃 규칙을 5회 반복해 덩어리지게 하고
+        # ③ flood fill(DFS)로 가장 큰 연결 영역만 남겨 끊긴 섬을 제거 
+        # ④ 너무 비면 안전망.
         w, h = self.w, self.h
         # 1) 초기 노이즈 — 가장자리는 강제 벽, 안쪽은 ~52% 바닥
         grid = [[(random.random() < 0.52) for _ in range(w)] for _ in range(h)]
@@ -123,7 +142,9 @@ class Room:
         return mask
 
 class Map:
-    
+    # 한 층의 던전. 그리드(self.map), 방 목록, 시작/도착 좌표, 적 목록을 들고 있다.
+    # 외부에는 get_tile/is_walkable 같은 O(1) 조회만 노출하고, 생성 로직은 내부(_…)에 둔다.
+
     MAP_W = 80
     MAP_H = 50
     ROOM_MIN = 4
@@ -186,8 +207,8 @@ class Map:
         self._spawn_entities(self.monsters)
 
     def _scatter_noise(self):
-        """맵 전체에 장식용 노이즈 추가: 바닥 돌조각 + 도착 힌트 + 벽 가장자리 랜모니.
-        도착점 근처일수록 힌트 타일 확률이 높아진다."""
+        # 맵 전체에 장식용 노이즈 추가: 바닥 돌조각 + 도착 힌트 + 벽 가장자리 깎기
+        # 도착점 근처일수록 힌트 타일 확률이 높아진다.
         ex, ey = self.end
         hint_radius = 28
         rubble_rate = 0.03   # 일반 돌조각 비율 (전역)
@@ -209,7 +230,7 @@ class Map:
                 # 일반 돌조각: 전역 균등
                 if random.random() < rubble_rate:
                     self.map[y][x] = TILE_RUBBLE
-        # 2) 벽 → 바닥 랜모니: 바닥과 인접한 벽 일부를 깎아 가장자리에 요철
+        # 2) 벽 → 바닥 깎기: 바닥과 인접한 벽 일부를 깎아 가장자리에 요철
         carved = []
         for y in range(1, self.MAP_H - 1):
             for x in range(1, self.MAP_W - 1):
@@ -282,7 +303,9 @@ class Map:
         return best
 
     def _connect_rooms(self):
-        # 최근접 미연결 방으로 차례차례 잇기 (Prim 비슷). 평균 복도 길이가 짧아진다.
+        # 방들을 복도로 잇는다. '연결된 집합'에서 출발해, 매번 그 집합과 가장 가까운
+        # '미연결' 방을 골라 이어 붙인다 — 한 정점에서 자라나는 Prim의 MST와 같은 아이디어라
+        # 모든 방이 연결되면서 복도 총길이가 짧아진다. 끝에 루프 1~2개를 더해 막다른 길을 줄인다.
         if not self.rooms:
             return
         anchors = [self._room_anchor(r) for r in self.rooms]
@@ -349,6 +372,8 @@ class Map:
                     self.map[ey][ex] = TILE_FLOOR
 
     def _place_start_end(self):
+        # 시작/도착 방을 정한다. 모든 방 쌍을 보고(O(방²)) 맨해튼 거리가 가장 먼 둘을 고른다.
+        # 그래도 MIN_DIST(=30) 미만이면 실패를 알려 _generate가 맵을 다시 만들게 한다.
         if len(self.rooms) < 2:
             return False
         # 맨해튼 거리가 가장 먼 두 방 선택
@@ -373,7 +398,7 @@ class Map:
         return True
 
     def _can_place(self, x, y, size, occupied):
-        """좌상단 (x, y)에 size×size 점유 가능 여부 — 경계/벽/이미 점유된 칸 검사."""
+        # 좌상단 (x, y)에 size×size 점유 가능 여부 — 경계/벽/이미 점유된 칸 검사.
         for dy in range(size):
             for dx in range(size):
                 tx, ty = x + dx, y + dy
@@ -419,7 +444,7 @@ class Map:
                     enemies.append(enemy_class(ex, ey, self.floor))
 
     def _spawn_boss(self, enemies):
-        """도착 방 안에 BossEnemy(2×2) 한 마리 배치."""
+        # 도착 방 안에 BossEnemy(2×2) 한 마리 배치.
         room = self._end_room
         candidates = []
         for y in range(room.y, room.y + room.h - 1):

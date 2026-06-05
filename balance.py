@@ -32,7 +32,7 @@ MIN_DAMAGE          = 1     # 방어가 공격 이상이어도 최소 이만큼�
 
 # 적 레벨 스케일: stat = base * (SCALE_BASE + lvl * SCALE_PER_LVL)
 ENEMY_SCALE_BASE    = 1
-ENEMY_SCALE_PER_LVL = 0.7
+ENEMY_SCALE_PER_LVL = 0.8
 # 적 경험치 보상: reward = XP * lvl  (계수)
 ENEMY_XP_PER_LVL    = 1
 

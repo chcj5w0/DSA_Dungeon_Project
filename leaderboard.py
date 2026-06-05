@@ -5,7 +5,7 @@ import json
 
 
 def _rank_key(rec):
-    #정렬 키. sorted(reverse=False)에서 작을수록 위로 오도록 변환.
+    # 정렬 키. sorted(reverse=False)에서 작을수록 위로 오도록 변환.
     # - cleared: True가 위 → not cleared (False<True 이므로 클리어가 0)
     # - score: 큰 게 위 → 음수
     # - time: 작은 게 위 → 그대로
@@ -13,7 +13,7 @@ def _rank_key(rec):
 
 
 def _is_better(new_rec, old_rec):
-    #같은 이름의 두 기록 중 new_rec이 더 좋은(위에 와야 할) 기록인가.
+    # 같은 이름의 두 기록 중 new_rec이 더 좋은(위에 와야 할) 기록인가.
     return _rank_key(new_rec) < _rank_key(old_rec)
 
 # 리더보드 클래스: 이름과 레코드(점수, 클리어 여부, 시간)를 관리. 파일 입출력 포함.

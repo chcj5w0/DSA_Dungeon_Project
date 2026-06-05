@@ -1,8 +1,18 @@
+# 적(Enemy) AI 모듈.
+#
+# 적은 두 알고리즘으로 움직인다.
+#   - 추적: BFS(`_bfs_next_step`)로 플레이어까지 최단 경로의 '다음 한 칸'을 구한다.
+#           격자는 칸 이동 비용이 모두 1인 무가중치 그래프라 BFS가 최단을 보장한다(O(V+E)).
+#   - 시야: Bresenham 직선(`_bresenham`)으로 적-플레이어 사이 칸을 훑어 벽이 가로막는지 본다.
+# 종류별 `update()`는 "보이면 추격/공격/후퇴, 안 보이면 무작위 배회"의 간단한 상태기계다.
+
 import random
 from collections import deque
 import balance
 
-
+# [Bresenham 알고리즘] 정수 연산만을 이용해 두 좌표 사이의 직선 경로를 구하는 알고리즘.
+# float 연산이나 삼각함수가 없어 연산 속도가 매우 빠르며, 시야 차단 검사에 최적이다.
+# 시간복잡도: O(max(dx, dy))
 def _bresenham(x0, y0, x1, y1):
     points = []
     dx = abs(x1 - x0)
@@ -23,11 +33,15 @@ def _bresenham(x0, y0, x1, y1):
             err += dx
             y += sy
 
+# 유클리드 거리
 def _pythagorean_dist(x0, y0, x1, y1):
     return ((x1 - x0) ** 2 + (y1 - y0) ** 2) ** 0.5
 
 
 class Enemy():
+    # 모든 적의 공통 베이스. 위치·체력·시야와 BFS 추적/회피 유틸을 제공하고,
+    # 구체 행동은 하위 클래스 `update()`가 정의한다. SIZE로 n×n 점유를 지원해
+    # 2×2 보스도 같은 코드를 공유한다.
 
     NAME = "enemy"
     MAX_HEALTH = balance.ENEMY_STATS["Enemy"]["hp"]
@@ -50,14 +64,18 @@ class Enemy():
 
     # --- 점유 영역 ---
 
+    # 대형 몬스터(Boss, SIZE=2) 대응을 위한 다중 타일 배열 생성 함수.
+    # 시간복잡도: O(SIZE^2) - 일반 적은 O(1)이며, 2x2 보스여도 4칸만 계산하므로 상수 시간에 가깝다
     def occupied_tiles(self, x=None, y=None):
-        """좌상단 (x, y) 기준 SIZE×SIZE 점유 좌표 목록. x/y 생략 시 현재 위치."""
+        # 좌상단 (x, y) 기준 SIZE×SIZE 점유 좌표 목록. x/y 생략 시 현재 위치.
         x = self.x if x is None else x
         y = self.y if y is None else y
         return [(x + dx, y + dy) for dy in range(self.SIZE) for dx in range(self.SIZE)]
 
+    # 대형 몬스터가 플레이어를 조준할 때, 자신의 덩치 중 플레이어와 가장 인접한 타일을 찾는 헬퍼 함수.
+    # 맨해튼 거리를 기준으로 최적의 타일을 계산한다. 시간복잡도: O(SIZE^2)
     def _closest_own_tile(self, tx, ty):
-        """점유 칸 중 (tx, ty)와 맨해튼 거리 최소인 칸."""
+        # 점유 칸 중 (tx, ty)와 맨해튼 거리 최소인 칸.
         best = (self.x, self.y)
         best_d = abs(self.x - tx) + abs(self.y - ty)
         for ox, oy in self.occupied_tiles():
@@ -78,20 +96,26 @@ class Enemy():
     # --- 인지 ---
 
     def can_see(self, player, game_map):
-        # 점유 칸 중 가장 가까운 칸을 기준으로 거리/시야 판정
+        # 2단계 시야 판정.
+        # 1) 거리 게이트: 가장 가까운 점유 칸 기준 유클리드 거리가 SIGHT를 넘으면 안 보임.
         ox, oy = self._closest_own_tile(player.x, player.y)
         if _pythagorean_dist(ox, oy, player.x, player.y) > self.SIGHT:
             return False
+        
+        # 2) 직선 판정: Bresenham으로 둘 사이 칸을 그어, 중간에 벽이 있으면 시야가 막힘.
         line = _bresenham(ox, oy, player.x, player.y)
-        for x, y in line[1:-1]:
+        for x, y in line[1:-1]:  # 양 끝(자신·플레이어)은 빼고 사이 칸만 검사
             if not game_map.is_walkable(x, y):
-                return False
+                return False # 시야 차단됨
         return True
 
     # --- 이동 유틸 ---
 
+    # 이동하려는 좌표에 벽이나 플레이어, 타 적군이 존재하는지 검사한다.
+    # 대형 보스의 경우 자신이 차지할 전 범위(SIZE*SIZE)를 순회하며 충돌을 검사한다.
+    # 시간복잡도: O(SIZE^2 * 적 수)
     def _blocked(self, x, y, game_map, enemies, player):
-        """좌상단 (x, y)에 SIZE×SIZE로 놓일 수 있는지 검사."""
+        # 좌상단 (x, y)에 SIZE×SIZE로 놓일 수 있는지 검사.
         for tx, ty in self.occupied_tiles(x, y):
             if not game_map.is_walkable(tx, ty):
                 return True
@@ -106,7 +130,9 @@ class Enemy():
         return False
 
     def _bfs_next_step(self, target, game_map, enemies, player):
-        """target 칸으로 가는 BFS 한 칸 이동 좌표. SIZE>1인 경우 target도 점유 검사."""
+        # target까지 BFS로 최단 경로를 찾아 '다음 한 칸'만 돌려준다.
+        # 무가중치 격자라 BFS가 최단을 보장한다(O(V+E)≈탐색 칸 수). 실제로는 시야 안에서만
+        # 호출돼 탐색 범위가 시야 반경으로 제한된다. SIZE>1(보스)이면 목적지 도달만 따로 허용
         start = (self.x, self.y)
         if start == target:
             return None
@@ -152,6 +178,7 @@ class Enemy():
         if nxt is not None and not self._blocked(nxt[0], nxt[1], game_map, enemies, player):
             self.x, self.y = nxt
 
+    # 그리디한 방식으로 플레이어로부터 멀어져 도망친다.
     def _step_away(self, from_xy, game_map, enemies, player):
         fx, fy = from_xy
         ox, oy = self._closest_own_tile(fx, fy)
@@ -191,6 +218,7 @@ class Enemy():
 
 
 class MeleeEnemy(Enemy):
+    # 근접형: 보이면 추격해 인접 시 공격. 체력이 max/RETREAT_HP_DIVISOR 밑이면 후퇴한다.
     NAME = "melee"
     MAX_HEALTH = balance.ENEMY_STATS["Melee"]["hp"]
     ATTACK = balance.ENEMY_STATS["Melee"]["atk"]
@@ -213,6 +241,7 @@ class MeleeEnemy(Enemy):
 
 
 class RangedEnemy(Enemy):
+    # 원거리형: 사거리(MIN_DIST~MAX_DIST)를 유지. 너무 가까우면 후퇴, 멀면 접근, 적당하면 사격.
     NAME = "ranged"
     MAX_HEALTH = balance.ENEMY_STATS["Ranged"]["hp"]
     ATTACK = balance.ENEMY_STATS["Ranged"]["atk"]
@@ -237,6 +266,7 @@ class RangedEnemy(Enemy):
 
 
 class FastEnemy(Enemy):
+    # 속도형: 한 턴에 STEPS_PER_TURN번(=2) 추격/공격. 힙 스케줄링 대신 '루프 2회'로 단순화했다.
     NAME = "fast"
     MAX_HEALTH = balance.ENEMY_STATS["Fast"]["hp"]
     ATTACK = balance.ENEMY_STATS["Fast"]["atk"]
@@ -258,6 +288,8 @@ class FastEnemy(Enemy):
 
 
 class BossEnemy(Enemy):
+    # 보스: 2×2 점유. 시야와 무관하게 항상 추적(can_see=True)하고,
+    # 플레이어와 인접한 빈 칸을 BFS 목표로 삼는다.
     NAME = "boss"
     MAX_HEALTH = balance.ENEMY_STATS["Boss"]["hp"]
     ATTACK = balance.ENEMY_STATS["Boss"]["atk"]
@@ -271,7 +303,7 @@ class BossEnemy(Enemy):
         return True
 
     def _bfs_target_for_player(self, player, game_map, enemies):
-        """플레이어와 인접한 빈 칸 중 보스가 들어갈 수 있는 좌상단 좌표."""
+        # 플레이어와 인접한 빈 칸 중 보스가 들어갈 수 있는 좌상단 좌표.
         candidates = []
         for dx, dy in ((0, -1), (0, 1), (-1, 0), (1, 0)):
             ax, ay = player.x + dx, player.y + dy
