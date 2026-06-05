@@ -32,7 +32,6 @@ Python + pygame으로 구현한 던전 크롤러 RPG 게임. GIST 자료구조�
 | 항목 | 상수 | 값 |
 |------|------|---:|
 | 처치 XP 1당 | `SCORE_PER_XP` | +100 |
-| 골드 1당 | `SCORE_PER_GOLD` | +500 |
 | Undo 1회당 | `SCORE_UNDO_PENALTY` | −10 |
 | 경과 1초당 | `SCORE_TIME_PENALTY` | −10 |
 
@@ -61,23 +60,6 @@ Python + pygame으로 구현한 던전 크롤러 RPG 게임. GIST 자료구조�
 - **적 AI 거리 게이팅**: 플레이어와 맨해튼 거리가 `AI_ACTIVE_RADIUS`(=12) 이내인 적만 매 턴 `update()`를 돌려 BFS 비용을 줄임. 보스는 멀리서도 추적하는 설계라 게이팅에서 제외.
 - **이미지 1회 로드**: `render()`가 매 프레임 `load_images()`를 호출하던 병목을 제거하고, 이미지 캐시(`IMAGES`)가 비었을 때만 1회 로드.
 
-## 파일 구조
-
-```
-DSA/
-├── main.py          # 게임 루프, 입력 처리, 턴 진행, 카메라, 게임오버 화면
-├── map.py           # 던전 맵 생성 (방 배치 + L자 복도 + 스폰)
-├── player.py        # 플레이어 상태·이동·공격·인벤토리·층 이동
-├── enemy.py         # Enemy 부모 + Melee/Ranged/Fast/Boss(2×2) AI
-├── item.py          # Weapon / Potion 랜덤 생성
-├── frame.py         # Undo용 Stack 프레임
-├── render.py        # 맵·적·플레이어 렌더링 + HUD + 점수 계산
-├── leaderboard.py   # 점수 저장/로드 (JSON), 정렬
-├── balance.py       # 게임 밸런스 상수 (스탯·스폰·점수·성능)
-├── assets/          # 스프라이트 이미지 (Player, Enemy, Tiles)
-├── MAP.md           # 던전 맵 설계 문서
-└── DSA Project.pdf  # 프로젝트 발표 슬라이드
-```
 
 ## 실행
 
