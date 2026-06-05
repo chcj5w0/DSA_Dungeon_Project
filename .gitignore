@@ -25,3 +25,6 @@ venv/
 
 # 자료
 /Team_Project_Evaluation_Guidance.pdf
+
+# 발표자료 PDF 내보내기 (pptx만 추적, PDF는 비공개)
+/DSA_Project_평가발표.pdf
