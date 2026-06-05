@@ -19,5 +19,9 @@ venv/
 .vscode/
 .idea/
 
+# Office 임시 잠금 파일 (LibreOffice / MS Office)
+.~lock.*#
+~$*
+
 # 자료
 /Team_Project_Evaluation_Guidance.pdf

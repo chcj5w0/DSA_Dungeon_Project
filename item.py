@@ -1,5 +1,6 @@
 import random
 
+# 이 함수는 무작위로 아이템을 생성하는 함수이다. 여기서 70% 확률로 포션을, 30% 확률로 무기를 생성한다.
 def generate_random_item():
     item_type = 'potion' if random.random() < 0.7 else 'weapon'
     
@@ -33,6 +34,7 @@ def generate_random_item():
             effect_amount = random.randint(50, 100)
         return Potion(name, effect_amount)
 
+# 아이템 클래스와 그 하위 클래스인 무기와 포션 클래스를 정의한다. 무기는 공격력 보너스를, 포션은 효과량을 가진다.
 class Item:
     def __init__(self, name="item"):
         self.name = name

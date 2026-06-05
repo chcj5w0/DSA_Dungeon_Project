@@ -93,9 +93,7 @@ def _undo_left():
 
 def compute_score(frame, elapsed_sec):
     kill_xp = frame.get("kill_xp", 0)
-    gold    = frame.get("gold", 0)
     return max(0, int(kill_xp * SCORE_PER_XP
-                    + gold    * SCORE_PER_GOLD
                     - Frame.undo_count * SCORE_UNDO_PENALTY
                     - elapsed_sec * SCORE_TIME_PENALTY))
 

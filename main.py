@@ -177,8 +177,7 @@ def run_one_game(screen):
     # 한 판을 끝까지 진행. 종료 시 (status, frame, elapsed_sec) 반환.
     # status는 'won' / 'dead' / 'quit' 중 하나.
     # 새 판: 클래스 변수인 Frame 스택/undo 카운터를 초기화해야 이전 판이 안 섞인다.
-    Frame.frame = []
-    Frame.undo_count = 0
+    Frame.reset()
 
     # 맵과 플레이어 초기화, 초기화된 새로운 프레임을 생성한다.
     _map = map.Map(floor=1)

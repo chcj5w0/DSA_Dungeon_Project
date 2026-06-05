@@ -26,7 +26,7 @@ Python + pygame으로 구현한 던전 크롤러 RPG 게임. GIST 자료구조�
 `render.compute_score`가 계산하며, 상수는 [balance.py](balance.py)에 정의됩니다.
 
 ```
-점수 = max(0, killXP×100 + gold×500 − Undo횟수×10 − 경과초×10)
+점수 = max(0, killXP×100 − Undo횟수×10 − 경과초×10)
 ```
 
 | 항목 | 상수 | 값 |

@@ -41,7 +41,9 @@ class Enemy():
     def __init__(self, x, y, lvl=1, exp_reward=None):
         self.x = x
         self.y = y
-        self.health = balance.scaled_stat(self.MAX_HEALTH, lvl)
+        # 레벨 보정된 최대 체력을 인스턴스에 저장(후퇴 임계값 계산에 사용).
+        self.max_health = balance.scaled_stat(self.MAX_HEALTH, lvl)
+        self.health = self.max_health
         self.attack_power = balance.scaled_stat(self.ATTACK, lvl)
         self.exp_reward = (self.XP * lvl * balance.ENEMY_XP_PER_LVL
                            if exp_reward is None else exp_reward)
@@ -120,7 +122,10 @@ class Enemy():
                 nx, ny = cx + dx, cy + dy
                 if (nx, ny) in parent:
                     continue
-                if self._blocked(nx, ny, game_map, enemies, player):
+                # target 칸은 보통 플레이어가 점유해 _blocked이지만, 경로의 '목적지'로는
+                # 도달 가능해야 한다. 목적지는 큐에서 꺼내는 즉시 break하므로(통과·확장 안 함)
+                # 다른 막힌 칸으로 새어나가지 않는다. 이게 빠져 추적이 멈추던 버그였다.
+                if (nx, ny) != target and self._blocked(nx, ny, game_map, enemies, player):
                     continue
                 parent[(nx, ny)] = (cx, cy)
                 q.append((nx, ny))
@@ -142,14 +147,17 @@ class Enemy():
 
     def _step_toward(self, target, game_map, enemies, player):
         nxt = self._bfs_next_step(target, game_map, enemies, player)
-        if nxt is not None:
+        # 다음 칸이 목적지(플레이어 위치 등 막힌 칸)면 올라서지 않고 멈춘다.
+        # 추적 호출 전에 인접 시 공격하므로, 정상 경로에선 nxt가 막힌 칸이 될 일이 없다.
+        if nxt is not None and not self._blocked(nxt[0], nxt[1], game_map, enemies, player):
             self.x, self.y = nxt
 
     def _step_away(self, from_xy, game_map, enemies, player):
         fx, fy = from_xy
         ox, oy = self._closest_own_tile(fx, fy)
         best = None
-        best_dist = _pythagorean_dist(ox, oy, fx, fy)
+        # 후보 칸과 동일한 척도(맨해튼)로 비교한다. 예전엔 유클리드로 초기화해 척도가 섞였다.
+        best_dist = abs(ox - fx) + abs(oy - fy)
         for dx, dy in ((0, -1), (0, 1), (-1, 0), (1, 0)):
             nx, ny = self.x + dx, self.y + dy
             if self._blocked(nx, ny, game_map, enemies, player):
@@ -200,7 +208,7 @@ class MeleeEnemy(Enemy):
             if self._adjacent_to(player):
                 self.attack(player)
             else:
-                if self.health < self.MAX_HEALTH // balance.RETREAT_HP_DIVISOR:
+                if self.health < self.max_health // balance.RETREAT_HP_DIVISOR:
                     self._step_away((player.x, player.y), game_map, enemies, player)
                 else:
                     self._step_toward((player.x, player.y), game_map, enemies, player)

@@ -74,7 +74,6 @@ SPAWN_PER_ROOM_MAX  = 10      # 방당 적 수 상한
 # 점수 공식 (render.compute_score 와 일치)
 # ──────────────────────────────────────────────────────────
 SCORE_PER_XP        = 100   # killXP 1당 점수
-SCORE_PER_GOLD      = 500   # gold 1당 점수
 SCORE_UNDO_PENALTY  = 10    # Undo 1회당 차감
 SCORE_TIME_PENALTY  = 10    # 경과 1초당 차감
 
