@@ -32,7 +32,7 @@ MIN_DAMAGE          = 1     # 방어가 공격 이상이어도 최소 이만큼�
 
 # 적 레벨 스케일: stat = base * (SCALE_BASE + lvl * SCALE_PER_LVL)
 ENEMY_SCALE_BASE    = 1
-ENEMY_SCALE_PER_LVL = 1
+ENEMY_SCALE_PER_LVL = 0.7
 # 적 경험치 보상: reward = XP * lvl  (계수)
 ENEMY_XP_PER_LVL    = 1
 
@@ -44,7 +44,7 @@ ENEMY_XP_PER_LVL    = 1
 ENEMY_STATS = {
     "Enemy":  dict(hp=20, atk=5,  xp=20, sight=6,   drop=0.30),  # 추상 기본값
     "Melee":  dict(hp=30, atk=6,  xp=10, sight=6,   drop=0.30),
-    "Ranged": dict(hp=12, atk=5,  xp=15, sight=8,   drop=0.30,
+    "Ranged": dict(hp=12, atk=4,  xp=15, sight=8,   drop=0.30,
                    min_dist=2, max_dist=4),
     "Fast":   dict(hp=10, atk=4,  xp=12, sight=7,   drop=0.30,
                    steps_per_turn=2),

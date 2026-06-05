@@ -28,7 +28,6 @@ UNDO_MAX = 30  # frame.py의 스택 한도와 일치
 
 # 점수 공식 (단일 출처: balance.py)
 SCORE_PER_XP       = balance.SCORE_PER_XP
-SCORE_PER_GOLD     = balance.SCORE_PER_GOLD
 SCORE_UNDO_PENALTY = balance.SCORE_UNDO_PENALTY
 SCORE_TIME_PENALTY = balance.SCORE_TIME_PENALTY
     

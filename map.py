@@ -137,7 +137,7 @@ class Map:
         self.rooms = []       # list[Room]
         self.start = None     # (x, y) 플레이어 스폰
         self.end = None       # (x, y) 계단/출구
-        self.monsters = []    # 추후 Enemy 클래스로 교체
+        self.monsters = []    # Enemy 인스턴스 목록. _spawn_entities에서 채운다.
 
         self._generate()
 

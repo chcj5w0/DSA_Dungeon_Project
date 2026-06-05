@@ -189,10 +189,6 @@ class Enemy():
     def update(self, player, game_map, enemies):
         raise NotImplementedError
 
-    # 하위 호환: 기존 코드에서 update(player, game_map)만 호출하던 경우 대비
-    def move(self):
-        pass
-
 
 class MeleeEnemy(Enemy):
     NAME = "melee"

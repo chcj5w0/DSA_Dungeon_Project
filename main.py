@@ -128,42 +128,9 @@ def turn_update(key, frame):
     if map.floor != pre_floor:
         Frame.reset_history()
 
-TILE_SIZE = 64
 
-TILE_COLORS = {
-    0: (100, 100, 120),   # 바닥
-    1: ( 40,  40,  60),   # 벽
-    2: (150, 150, 180),   # 문
-    3: (  0, 200, 100),   # 시작
-    4: (200, 100,   0),   # 도착
-}
-PLAYER_COLOR = (100, 180, 255)
-ENEMY_COLOR  = (220,  60,  60)
-ITEM_COLOR   = (255, 220,  50)
-
-IMAGES = {}  # pygame.init() 후 load_images()로 채움
-
-# --- 리소스 로드 ---
-def load_images():
-    IMAGES["player"] = pygame.transform.scale(
-        pygame.image.load("assets/Player/Player_0.png").convert_alpha(), (TILE_SIZE, TILE_SIZE))
-    IMAGES["floor"] = pygame.transform.scale(
-        pygame.image.load("assets/Tiles/floor_0.png").convert_alpha(), (TILE_SIZE, TILE_SIZE))
-    IMAGES["wall"] = pygame.transform.scale(
-        pygame.image.load("assets/Tiles/wall_0.png").convert_alpha(), (TILE_SIZE, TILE_SIZE))
-    # 적: 16×16 원본 → 64×64 (4배)
-    for key, fname in (
-        ("enemy_melee",  "MeleeEnemy_0.png"),
-        ("enemy_ranged", "RangedEnemy_0.png"),
-        ("enemy_fast",   "FastEnemy_0.png"),
-    ):
-        IMAGES[key] = pygame.transform.scale(
-            pygame.image.load(f"assets/Enemies/{fname}").convert_alpha(),
-            (TILE_SIZE, TILE_SIZE))
-    # 보스: 32×32 원본 → 128×128 (4배, 2×2 타일 점유)
-    IMAGES["enemy_boss"] = pygame.transform.scale(
-        pygame.image.load("assets/Enemies/BossEnemy_0.png").convert_alpha(),
-        (TILE_SIZE * 2, TILE_SIZE * 2))
+# 화면 상수·타일색·load_images()는 render.py로 일원화(단일 출처).
+# main은 [main.py:6]에서 render의 load_images를 import해 main()에서 호출한다.
 
 # --- 게임 시작 ---
 
